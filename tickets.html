@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Frontier Service Tickets">
+    <title>Service Tickets - Frontier</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1E40AF',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">
+                Live Network Tickets
+            </h1>
+            <p class="text-lg text-gray-600 mt-2">View and manage all network service tickets</p>
+            <a href="index.html" class="inline-block mt-4 text-primary hover:text-secondary transition-colors">
+                ← Back to Status Check
+            </a>
+        </div>
+
+        <!-- Tickets Table -->
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-semibold text-gray-900">All Network Tickets</h2>
+                <button onclick="loadTickets()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors flex items-center">
+                    <svg class="w-4 h-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Refresh
+                </button>
+            </div>
+            
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p class="mt-2 text-gray-600">Loading tickets...</p>
+            </div>
+            
+            <!-- Error State -->
+            <div id="errorState" class="hidden text-center py-8">
+                <div class="text-red-600 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Error Loading Tickets</h3>
+                <p class="text-gray-600 mb-4">There was a problem loading your tickets. Please try again.</p>
+                <button onclick="loadTickets()" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
+                    Try Again
+                </button>
+            </div>
+            
+            <!-- Tickets Table -->
+            <div id="ticketsTable" class="hidden overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Address</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue Description</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created</th>
+                        </tr>
+                    </thead>
+                    <tbody id="ticketsBody" class="bg-white divide-y divide-gray-200">
+                        <!-- Tickets will be populated here -->
+                    </tbody>
+                </table>
+            </div>
+            
+            <!-- Empty State -->
+            <div id="emptyState" class="hidden text-center py-8">
+                <div class="text-gray-400 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">No Tickets Found</h3>
+                <p class="text-gray-600">You haven't created any tickets yet.</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://sdbaxruslkklgglhszjq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkYmF4cnVzbGtrbGdnbGhzempxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODE0ODQsImV4cCI6MjA3NDc1NzQ4NH0.jEG-8ckdgMd0BYtDB9ThB2EtEqfzW8ndwMXN3oiQ8x8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        /**
+         * Load tickets from Supabase
+         */
+        async function loadTickets() {
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const ticketsTable = document.getElementById('ticketsTable');
+            const emptyState = document.getElementById('emptyState');
+            
+            // Show loading state
+            loadingState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            ticketsTable.classList.add('hidden');
+            emptyState.classList.add('hidden');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (error) {
+                    console.error('Error loading tickets:', error);
+                    throw error;
+                }
+
+                // Hide loading state
+                loadingState.classList.add('hidden');
+                
+                if (data && data.length > 0) {
+                    // Show tickets table
+                    displayTickets(data);
+                    ticketsTable.classList.remove('hidden');
+                } else {
+                    // Show empty state
+                    emptyState.classList.remove('hidden');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load tickets:', error);
+                loadingState.classList.add('hidden');
+                errorState.classList.remove('hidden');
+            }
+        }
+
+        /**
+         * Display tickets in the table
+         * @param {Array} tickets - Array of ticket objects
+         */
+        function displayTickets(tickets) {
+            const ticketsBody = document.getElementById('ticketsBody');
+            ticketsBody.innerHTML = '';
+            
+            tickets.forEach(ticket => {
+                const row = document.createElement('tr');
+                
+                // Format created date
+                const createdDate = new Date(ticket.created_at).toLocaleString();
+                
+                // Status badge styling
+                const statusClass = ticket.status === 'outage' 
+                    ? 'bg-red-100 text-red-800' 
+                    : 'bg-green-100 text-green-800';
+                
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                        <a href="ticket-view.html?id=${ticket.id}" class="text-primary hover:text-secondary transition-colors font-medium">
+                            ${ticket.address}
+                        </a>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                            ${ticket.status.toUpperCase()}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${ticket.issue_description}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${createdDate}</td>
+                `;
+                
+                ticketsBody.appendChild(row);
+            });
+        }
+
+        // Load tickets when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTickets();
+        });
+    </script>
+</body>
+</html>

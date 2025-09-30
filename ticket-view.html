@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Ticket Details - Frontier Service">
+    <title>Ticket Details - Frontier Service</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1E40AF',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">
+                Ticket Details
+            </h1>
+            <p class="text-lg text-gray-600 mt-2">View detailed information about this network ticket</p>
+            <div class="mt-4 space-x-4">
+                <a href="tickets.html" class="inline-block text-primary hover:text-secondary transition-colors">
+                    ← Back to All Tickets
+                </a>
+                <a href="index.html" class="inline-block text-gray-600 hover:text-gray-900 transition-colors">
+                    ← Back to Status Check
+                </a>
+            </div>
+        </div>
+
+        <!-- Ticket Details Card -->
+        <div class="bg-white rounded-2xl shadow-lg p-8">
+            <!-- Loading State -->
+            <div id="loadingState" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                <p class="mt-2 text-gray-600">Loading ticket details...</p>
+            </div>
+            
+            <!-- Error State -->
+            <div id="errorState" class="hidden text-center py-8">
+                <div class="text-red-600 mb-4">
+                    <svg class="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" />
+                    </svg>
+                </div>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Ticket Not Found</h3>
+                <p class="text-gray-600 mb-4">The requested ticket could not be found or loaded.</p>
+                <a href="tickets.html" class="bg-primary text-white px-4 py-2 rounded-lg hover:bg-secondary transition-colors">
+                    Back to Tickets
+                </a>
+            </div>
+            
+            <!-- Ticket Content -->
+            <div id="ticketContent" class="hidden">
+                <!-- Ticket Header -->
+                <div class="flex justify-between items-start mb-6">
+                    <div>
+                        <h2 class="text-2xl font-semibold text-gray-900">Ticket #<span id="ticketId"></span></h2>
+                        <p class="text-gray-600">Created on <span id="createdDate"></span></p>
+                    </div>
+                    <div id="statusBadge" class="inline-flex px-3 py-1 text-sm font-semibold rounded-full">
+                        <!-- Status badge will be inserted here -->
+                    </div>
+                </div>
+                
+                <!-- Ticket Details Grid -->
+                <div class="grid md:grid-cols-2 gap-6">
+                    <!-- Address Section -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Address
+                        </h3>
+                        <p id="ticketAddress" class="text-gray-700"></p>
+                    </div>
+                    
+                    <!-- Contact Section -->
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 8l7.89 4.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                            </svg>
+                            Contact Email
+                        </h3>
+                        <p id="contactEmail" class="text-gray-700"></p>
+                    </div>
+                </div>
+                
+                <!-- Issue Description Section -->
+                <div class="mt-6">
+                    <h3 class="text-lg font-semibold text-gray-900 mb-3 flex items-center">
+                        <svg class="w-5 h-5 mr-2 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        Issue Description
+                    </h3>
+                    <div class="bg-gray-50 rounded-lg p-6">
+                        <p id="issueDescription" class="text-gray-700 leading-relaxed"></p>
+                    </div>
+                </div>
+                
+                <!-- Actions Section -->
+                <div class="mt-8 pt-6 border-t border-gray-200">
+                    <div class="flex flex-col sm:flex-row gap-4">
+                        <button onclick="updateTicketStatus()" class="bg-primary text-white px-6 py-3 rounded-lg font-semibold hover:bg-secondary transition-colors">
+                            Update Status
+                        </button>
+                        <button onclick="refreshTicket()" class="border border-gray-300 text-gray-700 px-6 py-3 rounded-lg font-semibold hover:bg-gray-50 transition-colors">
+                            Refresh
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://sdbaxruslkklgglhszjq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkYmF4cnVzbGtrbGdnbGhzempxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODE0ODQsImV4cCI6MjA3NDc1NzQ4NH0.jEG-8ckdgMd0BYtDB9ThB2EtEqfzW8ndwMXN3oiQ8x8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let currentTicket = null;
+
+        /**
+         * Get ticket ID from URL parameters
+         */
+        function getTicketIdFromUrl() {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get('id');
+        }
+
+        /**
+         * Load ticket details from Supabase
+         */
+        async function loadTicketDetails() {
+            const ticketId = getTicketIdFromUrl();
+            
+            if (!ticketId) {
+                showError();
+                return;
+            }
+
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const ticketContent = document.getElementById('ticketContent');
+            
+            // Show loading state
+            loadingState.classList.remove('hidden');
+            errorState.classList.add('hidden');
+            ticketContent.classList.add('hidden');
+            
+            try {
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .select('*')
+                    .eq('id', ticketId)
+                    .single();
+
+                if (error) {
+                    console.error('Error loading ticket:', error);
+                    throw error;
+                }
+
+                if (data) {
+                    currentTicket = data;
+                    displayTicketDetails(data);
+                    loadingState.classList.add('hidden');
+                    ticketContent.classList.remove('hidden');
+                } else {
+                    throw new Error('Ticket not found');
+                }
+                
+            } catch (error) {
+                console.error('Failed to load ticket:', error);
+                loadingState.classList.add('hidden');
+                showError();
+            }
+        }
+
+        /**
+         * Display ticket details in the UI
+         * @param {Object} ticket - The ticket object
+         */
+        function displayTicketDetails(ticket) {
+            // Set basic info
+            document.getElementById('ticketId').textContent = ticket.id;
+            document.getElementById('ticketAddress').textContent = ticket.address;
+            document.getElementById('contactEmail').textContent = ticket.contact_email || 'Not provided';
+            document.getElementById('issueDescription').textContent = ticket.issue_description;
+            
+            // Format and set created date
+            const createdDate = new Date(ticket.created_at).toLocaleString();
+            document.getElementById('createdDate').textContent = createdDate;
+            
+            // Set status badge
+            const statusBadge = document.getElementById('statusBadge');
+            if (ticket.status === 'outage') {
+                statusBadge.className = 'inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-red-100 text-red-800';
+                statusBadge.textContent = 'OUTAGE';
+            } else {
+                statusBadge.className = 'inline-flex px-3 py-1 text-sm font-semibold rounded-full bg-green-100 text-green-800';
+                statusBadge.textContent = 'OK';
+            }
+        }
+
+        /**
+         * Show error state
+         */
+        function showError() {
+            const loadingState = document.getElementById('loadingState');
+            const errorState = document.getElementById('errorState');
+            const ticketContent = document.getElementById('ticketContent');
+            
+            loadingState.classList.add('hidden');
+            errorState.classList.remove('hidden');
+            ticketContent.classList.add('hidden');
+        }
+
+        /**
+         * Update ticket status (placeholder function)
+         */
+        function updateTicketStatus() {
+            alert('Update status functionality would be implemented here!');
+        }
+
+        /**
+         * Refresh ticket data
+         */
+        function refreshTicket() {
+            loadTicketDetails();
+        }
+
+        // Load ticket details when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            loadTicketDetails();
+        });
+    </script>
+</body>
+</html>

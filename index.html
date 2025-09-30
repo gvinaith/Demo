@@ -1,0 +1,297 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Frontier Service Status Checker">
+    <title>Frontier Service Status</title>
+    
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Supabase CDN -->
+    <script src="https://unpkg.com/@supabase/supabase-js@2"></script>
+    
+    <!-- Custom Tailwind Configuration -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#3B82F6',
+                        secondary: '#1E40AF',
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Header -->
+        <div class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">
+                Frontier Service Status
+            </h1>
+            <p class="text-lg text-gray-600 mt-2">Check your service status and view location</p>
+        </div>
+
+        <!-- Main Content Grid -->
+        <div class="grid lg:grid-cols-2 gap-8">
+            <!-- Left Side - Form -->
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <!-- Form -->
+                <form class="space-y-6">
+                    <!-- Address Input -->
+                    <div>
+                        <label for="address" class="block text-sm font-medium text-gray-700 mb-2">
+                            Customer Address
+                        </label>
+                        <input 
+                            type="text" 
+                            id="address" 
+                            name="address" 
+                            placeholder="Enter your address..."
+                            class="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-primary focus:border-transparent outline-none transition-all duration-200"
+                            required
+                        >
+                    </div>
+                    
+                    <!-- Check Status Button -->
+                    <button 
+                        type="submit" 
+                        class="w-full bg-primary text-white py-3 px-6 rounded-lg font-semibold hover:bg-secondary transition-colors duration-200 focus:ring-2 focus:ring-primary focus:ring-offset-2 outline-none"
+                    >
+                        Check Status
+                    </button>
+                </form>
+                
+                <!-- Status Message Display -->
+                <div id="statusMessage" class="mt-6 hidden">
+                    <div class="p-4 rounded-lg border">
+                        <div class="flex items-start">
+                            <div class="flex-shrink-0">
+                                <div id="statusIcon" class="w-6 h-6 rounded-full flex items-center justify-center">
+                                    <!-- Icon will be added dynamically -->
+                                </div>
+                            </div>
+                            <div class="ml-3">
+                                <h3 id="statusTitle" class="text-sm font-medium"></h3>
+                                <p id="statusText" class="text-sm mt-1"></p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side - Google Map -->
+            <div class="bg-white rounded-2xl shadow-lg p-8">
+                <h2 class="text-xl font-semibold text-gray-900 mb-4">Location Map</h2>
+                <div class="relative">
+                    <!-- Map Container -->
+                    <div id="mapContainer" class="w-full h-96 rounded-lg overflow-hidden border border-gray-200">
+                        <!-- Default map showing general area -->
+                        <iframe 
+                            id="googleMap"
+                            width="100%" 
+                            height="100%" 
+                            style="border:0" 
+                            loading="lazy" 
+                            allowfullscreen
+                            referrerpolicy="no-referrer-when-downgrade"
+                            src="https://www.google.com/maps/embed/v1/view?key=AIzaSyD-XAAVUQgPZJ47ayTMwO6BiAfBoMXhXcM&center=39.8283,-98.5795&zoom=4&maptype=roadmap">
+                        </iframe>
+                    </div>
+                    
+                    <!-- Map Status -->
+                    <div id="mapStatus" class="mt-3 text-sm text-gray-600">
+                        Enter an address to view the specific location
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Initialize Supabase client
+        const supabaseUrl = 'https://sdbaxruslkklgglhszjq.supabase.co';
+        const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InNkYmF4cnVzbGtrbGdnbGhzempxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkxODE0ODQsImV4cCI6MjA3NDc1NzQ4NH0.jEG-8ckdgMd0BYtDB9ThB2EtEqfzW8ndwMXN3oiQ8x8';
+        const supabase = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        // Predefined list of addresses with known outages
+        const outageAddresses = [
+            "123 Main Street, Anytown, CA 90210",
+            "456 Oak Avenue, Springfield, IL 62701",
+            "789 Pine Road, Austin, TX 73301",
+            "321 Elm Street, Portland, OR 97201",
+            "654 Maple Drive, Denver, CO 80201"
+        ];
+
+        /**
+         * Check network status for a given address
+         * @param {string} address - The customer's address
+         * @returns {Object} Status object with status and message
+         */
+        function checkNetworkStatus(address) {
+            // Normalize the address for comparison (lowercase and trim)
+            const normalizedAddress = address.toLowerCase().trim();
+            
+            // Check if the address is in our outage list
+            const hasOutage = outageAddresses.some(outageAddress => 
+                outageAddress.toLowerCase().trim() === normalizedAddress
+            );
+            
+            if (hasOutage) {
+                return {
+                    status: 'outage',
+                    message: 'We are aware of an outage in your area. Estimated resolution time is 4 hours.'
+                };
+            } else {
+                // Simulate creating a ticket for new issues
+                console.log(`TICKET CREATED IN SERVICENOW: New potential issue reported at ${address}`);
+                
+                return {
+                    status: 'ok',
+                    message: 'No known outages in your area.'
+                };
+            }
+        }
+
+        /**
+         * Update Google Map to show the entered address
+         * @param {string} address - The address to display on the map
+         */
+        function updateMap(address) {
+            const mapIframe = document.getElementById('googleMap');
+            const mapStatus = document.getElementById('mapStatus');
+            
+            // Encode the address for URL
+            const encodedAddress = encodeURIComponent(address);
+            
+            // Update the map to show the specific address
+            const mapUrl = `https://www.google.com/maps/embed/v1/place?key=AIzaSyD-XAAVUQgPZJ47ayTMwO6BiAfBoMXhXcM&q=${encodedAddress}&zoom=15&maptype=roadmap`;
+            
+            mapIframe.src = mapUrl;
+            mapStatus.textContent = `Showing location: ${address}`;
+            
+            console.log('Map updated for address:', address);
+        }
+
+        /**
+         * Display status message in the UI
+         * @param {Object} result - The result from checkNetworkStatus
+         */
+        function displayStatusMessage(result) {
+            const statusMessage = document.getElementById('statusMessage');
+            const statusIcon = document.getElementById('statusIcon');
+            const statusTitle = document.getElementById('statusTitle');
+            const statusText = document.getElementById('statusText');
+            
+            // Show the message container
+            statusMessage.classList.remove('hidden');
+            
+            if (result.status === 'outage') {
+                // Outage styling
+                statusMessage.querySelector('.border').className = 'p-4 rounded-lg border border-red-200 bg-red-50';
+                statusIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center bg-red-100';
+                statusIcon.innerHTML = '<svg class="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.732-.833-2.5 0L4.268 19.5c-.77.833.192 2.5 1.732 2.5z" /></svg>';
+                statusTitle.textContent = 'Service Outage Detected';
+                statusTitle.className = 'text-sm font-medium text-red-800';
+                statusText.textContent = result.message;
+                statusText.className = 'text-sm mt-1 text-red-700';
+            } else {
+                // OK styling
+                statusMessage.querySelector('.border').className = 'p-4 rounded-lg border border-green-200 bg-green-50';
+                statusIcon.className = 'w-6 h-6 rounded-full flex items-center justify-center bg-green-100';
+                statusIcon.innerHTML = '<svg class="w-4 h-4 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>';
+                statusTitle.textContent = 'Service Status OK';
+                statusTitle.className = 'text-sm font-medium text-green-800';
+                statusText.textContent = result.message;
+                statusText.className = 'text-sm mt-1 text-green-700';
+            }
+        }
+
+        /**
+         * Submit ticket data to Supabase
+         * @param {string} address - The customer's address
+         * @param {string} status - The service status
+         * @param {string} message - The status message
+         */
+        async function submitTicketToSupabase(address, status, message) {
+            try {
+                const { data, error } = await supabase
+                    .from('tickets')
+                    .insert([
+                        {
+                            address: address,
+                            status: status,
+                            issue_description: message,
+                            contact_email: 'customer@example.com' // Default email for now
+                        }
+                    ]);
+
+                if (error) {
+                    console.error('Error inserting ticket:', error);
+                    throw error;
+                }
+
+                console.log('Ticket submitted successfully:', data);
+                return true;
+            } catch (error) {
+                console.error('Failed to submit ticket:', error);
+                return false;
+            }
+        }
+
+        // Form handling
+        document.addEventListener('DOMContentLoaded', function() {
+            const form = document.querySelector('form');
+            const addressInput = document.getElementById('address');
+            
+            form.addEventListener('submit', async function(e) {
+                e.preventDefault();
+                const address = addressInput.value.trim();
+                
+                if (address) {
+                    // Check the network status
+                    const result = checkNetworkStatus(address);
+                    
+                    // Display the result in the UI
+                    displayStatusMessage(result);
+                    
+                    // Update the map to show the address location
+                    updateMap(address);
+                    
+                    // Submit ticket to Supabase
+                    const ticketSubmitted = await submitTicketToSupabase(address, result.status, result.message);
+                    
+                    if (ticketSubmitted) {
+                        // Show success message and redirect after a short delay
+                        setTimeout(() => {
+                            window.location.href = 'tickets.html';
+                        }, 2000);
+                        
+                        // Show loading message
+                        const statusMessage = document.getElementById('statusMessage');
+                        const statusText = document.getElementById('statusText');
+                        statusText.textContent = 'Ticket created successfully! Redirecting to tickets page...';
+                        statusText.className = 'text-sm mt-1 text-blue-700';
+                    } else {
+                        // Show error message
+                        const statusMessage = document.getElementById('statusMessage');
+                        const statusText = document.getElementById('statusText');
+                        statusText.textContent = 'Failed to create ticket. Please try again.';
+                        statusText.className = 'text-sm mt-1 text-red-700';
+                    }
+                    
+                    // Log to console for debugging
+                    console.log('Address:', address);
+                    console.log('Status Result:', result);
+                } else {
+                    alert('Please enter a valid address.');
+                }
+            });
+        });
+    </script>
+</body>
+</html>
